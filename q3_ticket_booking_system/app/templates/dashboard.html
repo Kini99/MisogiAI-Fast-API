@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Ticket Booking System{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            Total Bookings
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-white" id="total-bookings">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-bookmark fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            Total Events
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-white" id="total-events">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-calendar-alt fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            Total Venues
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-white" id="total-venues">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-map-marker-alt fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            Total Revenue
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-white" id="total-revenue">-</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-dollar-sign fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Booking Status Chart -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Booking Status</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        <div class="text-success">
+                            <i class="fas fa-check-circle fa-3x"></i>
+                            <h4 class="mt-2" id="confirmed-bookings">-</h4>
+                            <p class="text-muted">Confirmed</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="text-warning">
+                            <i class="fas fa-clock fa-3x"></i>
+                            <h4 class="mt-2" id="pending-bookings">-</h4>
+                            <p class="text-muted">Pending</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <div class="text-danger">
+                            <i class="fas fa-times-circle fa-3x"></i>
+                            <h4 class="mt-2" id="cancelled-bookings">-</h4>
+                            <p class="text-muted">Cancelled</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="col-xl-6 col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <a href="/events" class="btn btn-primary w-100">
+                            <i class="fas fa-plus me-2"></i>Add Event
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="/bookings" class="btn btn-success w-100">
+                            <i class="fas fa-bookmark me-2"></i>Create Booking
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="/venues" class="btn btn-info w-100">
+                            <i class="fas fa-map-marker-alt me-2"></i>Add Venue
+                        </a>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <a href="/search" class="btn btn-warning w-100">
+                            <i class="fas fa-search me-2"></i>Search Bookings
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Events -->
+    <div class="col-xl-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Events</h6>
+            </div>
+            <div class="card-body">
+                <div id="recent-events">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading events...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Bookings -->
+    <div class="col-xl-6">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Recent Bookings</h6>
+            </div>
+            <div class="card-body">
+                <div id="recent-bookings">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading bookings...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Load dashboard data
+    async function loadDashboardData() {
+        try {
+            showLoading();
+            
+            // Load statistics
+            const stats = await apiRequest('/api/booking-system/stats');
+            document.getElementById('total-bookings').textContent = stats.total_bookings;
+            document.getElementById('total-events').textContent = stats.total_events;
+            document.getElementById('total-venues').textContent = stats.total_venues;
+            document.getElementById('total-revenue').textContent = formatCurrency(stats.total_revenue);
+            document.getElementById('confirmed-bookings').textContent = stats.confirmed_bookings;
+            document.getElementById('pending-bookings').textContent = stats.pending_bookings;
+            document.getElementById('cancelled-bookings').textContent = stats.cancelled_bookings;
+            
+            // Load recent events
+            const events = await apiRequest('/api/events?limit=5');
+            displayRecentEvents(events);
+            
+            // Load recent bookings
+            const bookings = await apiRequest('/api/bookings?limit=5');
+            displayRecentBookings(bookings);
+            
+        } catch (error) {
+            console.error('Error loading dashboard data:', error);
+            showAlert('Failed to load dashboard data', 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Display recent events
+    function displayRecentEvents(events) {
+        const container = document.getElementById('recent-events');
+        
+        if (events.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">No events found</p>';
+            return;
+        }
+        
+        const eventsHtml = events.map(event => `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="mb-0">${event.name}</h6>
+                    <small class="text-muted">${formatDate(event.date)}</small>
+                </div>
+                <span class="badge bg-primary">${event.venue?.name || 'N/A'}</span>
+            </div>
+        `).join('');
+        
+        container.innerHTML = eventsHtml;
+    }
+
+    // Display recent bookings
+    function displayRecentBookings(bookings) {
+        const container = document.getElementById('recent-bookings');
+        
+        if (bookings.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">No bookings found</p>';
+            return;
+        }
+        
+        const bookingsHtml = bookings.map(booking => {
+            const statusClass = {
+                'confirmed': 'bg-success',
+                'pending': 'bg-warning',
+                'cancelled': 'bg-danger'
+            }[booking.status] || 'bg-secondary';
+            
+            return `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h6 class="mb-0">${booking.customer_name}</h6>
+                        <small class="text-muted">${booking.event?.name || 'N/A'}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge ${statusClass}">${booking.status}</span>
+                        <br>
+                        <small class="text-muted">${formatCurrency(booking.total_amount)}</small>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        container.innerHTML = bookingsHtml;
+    }
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDashboardData();
+        
+        // Refresh data every 30 seconds
+        setInterval(loadDashboardData, 30000);
+    });
+</script>
+{% endblock %} 

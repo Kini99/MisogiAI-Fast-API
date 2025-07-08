@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket Types - Ticket Booking System{% endblock %}
+{% block page_title %}Ticket Types Management{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTicketTypeModal">
+    <i class="fas fa-plus me-2"></i>Add Ticket Type
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">All Ticket Types</h6>
+            </div>
+            <div class="card-body">
+                <div id="ticket-types-table">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading ticket types...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Ticket Type Modal -->
+<div class="modal fade" id="addTicketTypeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Ticket Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addTicketTypeForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="ticketTypeName" class="form-label">Ticket Type Name</label>
+                        <select class="form-select" id="ticketTypeName" required>
+                            <option value="">Select ticket type...</option>
+                            <option value="VIP">VIP</option>
+                            <option value="Standard">Standard</option>
+                            <option value="Economy">Economy</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ticketTypePrice" class="form-label">Price</label>
+                        <input type="number" class="form-control" id="ticketTypePrice" min="0" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="ticketTypeDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="ticketTypeDescription" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Ticket Type</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Ticket Type Details Modal -->
+<div class="modal fade" id="ticketTypeDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ticket Type Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="ticketTypeDetailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let ticketTypes = [];
+
+    // Load ticket types
+    async function loadTicketTypes() {
+        try {
+            showLoading();
+            ticketTypes = await apiRequest('/api/ticket-types');
+            displayTicketTypes(ticketTypes);
+        } catch (error) {
+            console.error('Error loading ticket types:', error);
+            showAlert('Failed to load ticket types', 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Display ticket types in table
+    function displayTicketTypes(ticketTypes) {
+        const container = document.getElementById('ticket-types-table');
+        
+        if (ticketTypes.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">No ticket types found</p>';
+            return;
+        }
+        
+        const tableHtml = `
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Price</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${ticketTypes.map(type => `
+                            <tr>
+                                <td>
+                                    <span class="badge bg-${type.name === 'VIP' ? 'danger' : type.name === 'Standard' ? 'primary' : 'success'}">${type.name}</span>
+                                </td>
+                                <td><strong>${formatCurrency(type.price)}</strong></td>
+                                <td>${type.description || 'N/A'}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="viewTicketTypeDetails(${type.id})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="viewTicketTypeBookings(${type.id})">
+                                        <i class="fas fa-bookmark"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        container.innerHTML = tableHtml;
+    }
+
+    // View ticket type details
+    async function viewTicketTypeDetails(ticketTypeId) {
+        try {
+            const ticketType = await apiRequest(`/ticket-types/${ticketTypeId}`);
+            
+            const content = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Ticket Type Information</h6>
+                        <p><strong>Name:</strong> <span class="badge bg-${ticketType.name === 'VIP' ? 'danger' : ticketType.name === 'Standard' ? 'primary' : 'success'}">${ticketType.name}</span></p>
+                        <p><strong>Price:</strong> ${formatCurrency(ticketType.price)}</p>
+                        <p><strong>Description:</strong> ${ticketType.description || 'N/A'}</p>
+                        <p><strong>Created:</strong> ${formatDate(ticketType.created_at)}</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('ticketTypeDetailsContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('ticketTypeDetailsModal')).show();
+        } catch (error) {
+            console.error('Error loading ticket type details:', error);
+            showAlert('Failed to load ticket type details', 'danger');
+        }
+    }
+
+    // View ticket type bookings
+    async function viewTicketTypeBookings(ticketTypeId) {
+        try {
+            const bookings = await apiRequest(`/ticket-types/${ticketTypeId}/bookings`);
+            
+            if (bookings.length === 0) {
+                showAlert('No bookings found for this ticket type', 'info');
+                return;
+            }
+            
+            const content = `
+                <h6>Bookings for this Ticket Type</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Event</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${bookings.map(booking => `
+                                <tr>
+                                    <td>${booking.customer_name}</td>
+                                    <td>${booking.event?.name || 'N/A'}</td>
+                                    <td>${booking.quantity}</td>
+                                    <td>${formatCurrency(booking.total_amount)}</td>
+                                    <td><span class="badge bg-${booking.status === 'confirmed' ? 'success' : booking.status === 'pending' ? 'warning' : 'danger'}">${booking.status}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('ticketTypeDetailsContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('ticketTypeDetailsModal')).show();
+        } catch (error) {
+            console.error('Error loading ticket type bookings:', error);
+            showAlert('Failed to load ticket type bookings', 'danger');
+        }
+    }
+
+    // Add ticket type form handler
+    document.getElementById('addTicketTypeForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            name: document.getElementById('ticketTypeName').value,
+            price: parseFloat(document.getElementById('ticketTypePrice').value),
+            description: document.getElementById('ticketTypeDescription').value
+        };
+        
+        try {
+            await apiRequest('/api/ticket-types', {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+            
+            showAlert('Ticket type created successfully!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addTicketTypeModal')).hide();
+            document.getElementById('addTicketTypeForm').reset();
+            loadTicketTypes();
+        } catch (error) {
+            console.error('Error creating ticket type:', error);
+        }
+    });
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadTicketTypes();
+    });
+</script>
+{% endblock %} 

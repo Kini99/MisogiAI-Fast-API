@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+
+{% block title %}Search - Ticket Booking System{% endblock %}
+{% block page_title %}Search Bookings{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Search Bookings</h6>
+            </div>
+            <div class="card-body">
+                <form id="searchForm">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="searchEventName" class="form-label">Event Name</label>
+                                <input type="text" class="form-control" id="searchEventName" placeholder="Search by event name...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="searchVenueName" class="form-label">Venue Name</label>
+                                <input type="text" class="form-control" id="searchVenueName" placeholder="Search by venue name...">
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="searchTicketType" class="form-label">Ticket Type</label>
+                                <select class="form-select" id="searchTicketType">
+                                    <option value="">All ticket types</option>
+                                    <option value="VIP">VIP</option>
+                                    <option value="Standard">Standard</option>
+                                    <option value="Economy">Economy</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="mb-3">
+                                <label for="searchStatus" class="form-label">Status</label>
+                                <select class="form-select" id="searchStatus">
+                                    <option value="">All statuses</option>
+                                    <option value="confirmed">Confirmed</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-2"></i>Search
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="clearSearch()">
+                                <i class="fas fa-times me-2"></i>Clear
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Search Results</h6>
+                <small class="text-muted" id="resultsCount">No search performed yet</small>
+            </div>
+            <div class="card-body">
+                <div id="search-results">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-search fa-3x mb-3"></i>
+                        <p>Enter search criteria above to find bookings</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search form handler
+    document.getElementById('searchForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        await performSearch();
+    });
+
+    // Perform search
+    async function performSearch() {
+        const eventName = document.getElementById('searchEventName').value;
+        const venueName = document.getElementById('searchVenueName').value;
+        const ticketType = document.getElementById('searchTicketType').value;
+        const status = document.getElementById('searchStatus').value;
+
+        // Build query string
+        const params = new URLSearchParams();
+        if (eventName) params.append('event_name', eventName);
+        if (venueName) params.append('venue_name', venueName);
+        if (ticketType) params.append('ticket_type', ticketType);
+        if (status) params.append('status', status);
+
+        try {
+            showLoading();
+            const results = await apiRequest(`/api/bookings/search/?${params.toString()}`);
+            displaySearchResults(results);
+        } catch (error) {
+            console.error('Error performing search:', error);
+            showAlert('Failed to perform search', 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Display search results
+    function displaySearchResults(bookings) {
+        const container = document.getElementById('search-results');
+        const countElement = document.getElementById('resultsCount');
+        
+        countElement.textContent = `${bookings.length} booking(s) found`;
+        
+        if (bookings.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <p>No bookings found matching your criteria</p>
+                </div>
+            `;
+            return;
+        }
+        
+        const tableHtml = `
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Booking Code</th>
+                            <th>Customer</th>
+                            <th>Event</th>
+                            <th>Venue</th>
+                            <th>Ticket Type</th>
+                            <th>Quantity</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${bookings.map(booking => `
+                            <tr>
+                                <td><code>${booking.booking_code}</code></td>
+                                <td>
+                                    <strong>${booking.customer_name}</strong><br>
+                                    <small class="text-muted">${booking.customer_email}</small>
+                                </td>
+                                <td>${booking.event?.name || 'N/A'}</td>
+                                <td>${booking.venue?.name || 'N/A'}</td>
+                                <td>
+                                    <span class="badge bg-${booking.ticket_type?.name === 'VIP' ? 'danger' : booking.ticket_type?.name === 'Standard' ? 'primary' : 'success'}">${booking.ticket_type?.name || 'N/A'}</span>
+                                </td>
+                                <td>${booking.quantity}</td>
+                                <td><strong>${formatCurrency(booking.total_amount)}</strong></td>
+                                <td><span class="badge bg-${booking.status === 'confirmed' ? 'success' : booking.status === 'pending' ? 'warning' : 'danger'}">${booking.status}</span></td>
+                                <td>${formatDate(booking.created_at)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        container.innerHTML = tableHtml;
+    }
+
+    // Clear search
+    function clearSearch() {
+        document.getElementById('searchForm').reset();
+        document.getElementById('search-results').innerHTML = `
+            <div class="text-center text-muted">
+                <i class="fas fa-search fa-3x mb-3"></i>
+                <p>Enter search criteria above to find bookings</p>
+            </div>
+        `;
+        document.getElementById('resultsCount').textContent = 'No search performed yet';
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-search on input change (debounced)
+        let searchTimeout;
+        const inputs = ['searchEventName', 'searchVenueName', 'searchTicketType', 'searchStatus'];
+        
+        inputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(performSearch, 500);
+            });
+        });
+    });
+</script>
+{% endblock %} 

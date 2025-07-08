@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Events - Ticket Booking System{% endblock %}
+{% block page_title %}Events Management{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEventModal">
+    <i class="fas fa-plus me-2"></i>Add Event
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">All Events</h6>
+            </div>
+            <div class="card-body">
+                <div id="events-table">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin fa-2x"></i>
+                        <p class="mt-2">Loading events...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Event Modal -->
+<div class="modal fade" id="addEventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addEventForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="eventName" class="form-label">Event Name</label>
+                        <input type="text" class="form-control" id="eventName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="eventDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="eventDescription" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="eventDate" class="form-label">Date & Time</label>
+                        <input type="datetime-local" class="form-control" id="eventDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="eventVenue" class="form-label">Venue</label>
+                        <select class="form-select" id="eventVenue" required>
+                            <option value="">Select a venue...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="eventCapacity" class="form-label">Capacity</label>
+                        <input type="number" class="form-control" id="eventCapacity" min="1" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Event</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Event Details Modal -->
+<div class="modal fade" id="eventDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Event Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="eventDetailsContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let events = [];
+    let venues = [];
+
+    // Load events
+    async function loadEvents() {
+        try {
+            showLoading();
+            events = await apiRequest('/api/events');
+            displayEvents(events);
+        } catch (error) {
+            console.error('Error loading events:', error);
+            showAlert('Failed to load events', 'danger');
+        } finally {
+            hideLoading();
+        }
+    }
+
+    // Load venues for dropdown
+    async function loadVenues() {
+        try {
+            venues = await apiRequest('/api/venues');
+            populateVenueDropdown();
+        } catch (error) {
+            console.error('Error loading venues:', error);
+        }
+    }
+
+    // Populate venue dropdown
+    function populateVenueDropdown() {
+        const select = document.getElementById('eventVenue');
+        select.innerHTML = '<option value="">Select a venue...</option>';
+        
+        venues.forEach(venue => {
+            const option = document.createElement('option');
+            option.value = venue.id;
+            option.textContent = `${venue.name} (${venue.capacity} capacity)`;
+            select.appendChild(option);
+        });
+    }
+
+    // Display events in table
+    function displayEvents(events) {
+        const container = document.getElementById('events-table');
+        
+        if (events.length === 0) {
+            container.innerHTML = '<p class="text-muted text-center">No events found</p>';
+            return;
+        }
+        
+        const tableHtml = `
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Date</th>
+                            <th>Venue</th>
+                            <th>Capacity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${events.map(event => `
+                            <tr>
+                                <td>
+                                    <strong>${event.name}</strong>
+                                    ${event.description ? `<br><small class="text-muted">${event.description}</small>` : ''}
+                                </td>
+                                <td>${formatDate(event.date)}</td>
+                                <td>${event.venue?.name || 'N/A'}</td>
+                                <td>${event.capacity}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info" onclick="viewEventDetails(${event.id})">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="viewEventBookings(${event.id})">
+                                        <i class="fas fa-bookmark"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="viewEventRevenue(${event.id})">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        container.innerHTML = tableHtml;
+    }
+
+    // View event details
+    async function viewEventDetails(eventId) {
+        try {
+                    const event = await apiRequest(`/api/events/${eventId}`);
+        const availableTickets = await apiRequest(`/api/events/${eventId}/available-tickets`);
+            
+            const content = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Event Information</h6>
+                        <p><strong>Name:</strong> ${event.name}</p>
+                        <p><strong>Description:</strong> ${event.description || 'N/A'}</p>
+                        <p><strong>Date:</strong> ${formatDate(event.date)}</p>
+                        <p><strong>Venue:</strong> ${event.venue?.name || 'N/A'}</p>
+                        <p><strong>Capacity:</strong> ${event.capacity}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Ticket Availability</h6>
+                        <p><strong>Total Capacity:</strong> ${availableTickets.total_capacity}</p>
+                        <p><strong>Booked Tickets:</strong> ${availableTickets.booked_tickets}</p>
+                        <p><strong>Available Tickets:</strong> ${availableTickets.available_tickets}</p>
+                        
+                        <h6 class="mt-3">Ticket Types</h6>
+                        ${availableTickets.ticket_types_available.map(type => `
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>${type.ticket_type_name}</span>
+                                <span class="badge bg-primary">$${type.price}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('eventDetailsContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('eventDetailsModal')).show();
+        } catch (error) {
+            console.error('Error loading event details:', error);
+            showAlert('Failed to load event details', 'danger');
+        }
+    }
+
+    // View event bookings
+    async function viewEventBookings(eventId) {
+        try {
+            const bookings = await apiRequest(`/api/events/${eventId}/bookings`);
+            
+            if (bookings.length === 0) {
+                showAlert('No bookings found for this event', 'info');
+                return;
+            }
+            
+            const content = `
+                <h6>Bookings for this Event</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Customer</th>
+                                <th>Ticket Type</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${bookings.map(booking => `
+                                <tr>
+                                    <td>${booking.customer_name}</td>
+                                    <td>${booking.ticket_type?.name || 'N/A'}</td>
+                                    <td>${booking.quantity}</td>
+                                    <td>${formatCurrency(booking.total_amount)}</td>
+                                    <td><span class="badge bg-${booking.status === 'confirmed' ? 'success' : booking.status === 'pending' ? 'warning' : 'danger'}">${booking.status}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('eventDetailsContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('eventDetailsModal')).show();
+        } catch (error) {
+            console.error('Error loading event bookings:', error);
+            showAlert('Failed to load event bookings', 'danger');
+        }
+    }
+
+    // View event revenue
+    async function viewEventRevenue(eventId) {
+        try {
+            const revenue = await apiRequest(`/api/events/${eventId}/revenue`);
+            
+            const content = `
+                <h6>Revenue Information</h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4 class="text-success">${formatCurrency(revenue.total_revenue)}</h4>
+                            <p class="text-muted">Total Revenue</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4 class="text-primary">${revenue.total_bookings}</h4>
+                            <p class="text-muted">Total Bookings</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h4 class="text-info">${formatCurrency(revenue.average_ticket_price)}</h4>
+                            <p class="text-muted">Average Ticket Price</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('eventDetailsContent').innerHTML = content;
+            new bootstrap.Modal(document.getElementById('eventDetailsModal')).show();
+        } catch (error) {
+            console.error('Error loading event revenue:', error);
+            showAlert('Failed to load event revenue', 'danger');
+        }
+    }
+
+    // Add event form handler
+    document.getElementById('addEventForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            name: document.getElementById('eventName').value,
+            description: document.getElementById('eventDescription').value,
+            date: document.getElementById('eventDate').value,
+            venue_id: parseInt(document.getElementById('eventVenue').value),
+            capacity: parseInt(document.getElementById('eventCapacity').value)
+        };
+        
+        try {
+            await apiRequest('/api/events', {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            });
+            
+            showAlert('Event created successfully!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('addEventModal')).hide();
+            document.getElementById('addEventForm').reset();
+            loadEvents();
+        } catch (error) {
+            console.error('Error creating event:', error);
+        }
+    });
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadVenues();
+        loadEvents();
+    });
+</script>
+{% endblock %} 
